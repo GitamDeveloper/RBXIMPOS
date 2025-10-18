@@ -1,0 +1,51 @@
+$main_save_path = "C:\WinFKAgent"
+
+function New-Folder {
+    param([string]$path)
+    if (!(Test-Path $path)) {
+        Write-Host "[+] Creating folder: $path"
+        New-Item -ItemType Directory -Path $path | Out-Null
+    } else {
+        Write-Host "[=] Folder exists: $path"
+    }
+}
+
+function Download-Zip {
+    param(
+        [string]$url,
+        [string]$dest,
+        [string]$folderName = ""
+    )
+
+    # Создаём папку для распаковки
+    if ([string]::IsNullOrWhiteSpace($folderName)) {
+        $folderName = [IO.Path]::GetFileNameWithoutExtension($url -split "\?")[0]
+    }
+    $extract = Join-Path $dest $folderName
+    New-Folder $extract
+
+    # Временный файл в целевой папке
+    $temp = Join-Path $dest "temp_download.zip"
+
+    try {
+        Write-Host "[>] Downloading $url ..."
+        Invoke-WebRequest -Uri $url -OutFile $temp -UseBasicParsing
+        Write-Host "[>] Extracting to $extract ..."
+        Expand-Archive -Path $temp -DestinationPath $extract -Force
+        Remove-Item $temp -Force
+        Write-Host "[✓] Done: $extract"
+    }
+    catch {
+        Write-Host "[!] Error: $_"
+    }
+}
+
+# Основная папка
+New-Folder $main_save_path
+
+# Пример использования
+$dropboxUrl = 'https://www.dropbox.com/scl/fi/t89nx9d3bii8g14t3j3ic/rbx_app.zip?rlkey=oxz1w7e13n5sh112brqk8fw1q&dl=1'
+Download-Zip $dropboxUrl $main_save_path "MyCustomFolder"
+
+Write-Host "`nPress any key to exit..."
+[void][System.Console]::ReadKey($true)
